@@ -1,65 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, Clock, DollarSign, Calendar, MessageSquare, Video } from 'lucide-react';
+import { supabaseService } from '../../services/supabaseService';
 
 export function TutorsTab() {
   const [selectedSubject, setSelectedSubject] = useState('all');
+  const [tutors, setTutors] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const tutors = [
-    {
-      id: '1',
-      name: 'Dr. Sarah Johnson',
-      subjects: ['Mathematics', 'Physics'],
-      rating: 4.9,
-      reviews: 127,
-      hourlyRate: 45,
-      avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-      experience: '8 years',
-      availability: 'Available Now',
-      description: 'PhD in Mathematics with extensive experience in calculus, algebra, and physics.',
-      specialties: ['Calculus', 'Linear Algebra', 'Quantum Physics']
-    },
-    {
-      id: '2',
-      name: 'Prof. Michael Chen',
-      subjects: ['Biology', 'Chemistry'],
-      rating: 4.8,
-      reviews: 89,
-      hourlyRate: 40,
-      avatar: 'https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-      experience: '12 years',
-      availability: 'Next: Tomorrow 2 PM',
-      description: 'Expert in molecular biology and organic chemistry with published research.',
-      specialties: ['Molecular Biology', 'Organic Chemistry', 'Biochemistry']
-    },
-    {
-      id: '3',
-      name: 'Dr. Emily Rodriguez',
-      subjects: ['Chemistry', 'Mathematics'],
-      rating: 4.9,
-      reviews: 156,
-      hourlyRate: 50,
-      avatar: 'https://images.pexels.com/photos/3762800/pexels-photo-3762800.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-      experience: '10 years',
-      availability: 'Available Now',
-      description: 'Specialist in advanced chemistry and mathematical modeling.',
-      specialties: ['Physical Chemistry', 'Statistics', 'Thermodynamics']
-    },
-    {
-      id: '4',
-      name: 'James Wilson',
-      subjects: ['History', 'Literature'],
-      rating: 4.7,
-      reviews: 94,
-      hourlyRate: 35,
-      avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-      experience: '6 years',
-      availability: 'Next: Today 4 PM',
-      description: 'Passionate about world history and classic literature analysis.',
-      specialties: ['World History', 'Shakespeare', 'Essay Writing']
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Load subjects
+      const subjectsData = await supabaseService.getSubjects();
+      setSubjects(subjectsData);
+
+      // Load tutors
+      const tutorsData = await supabaseService.getTutors();
+      const formattedTutors = tutorsData.map(tutor => ({
+        id: tutor.id,
+        name: tutor.users.name,
+        subjects: tutor.tutor_subjects?.map((ts: any) => ts.subjects?.name).filter(Boolean) || ['General'],
+        rating: tutor.rating,
+        reviews: Math.floor(Math.random() * 200) + 50, // Mock review count
+        hourlyRate: tutor.hourly_rate,
+        avatar: tutor.users.avatar_url || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+        experience: `${tutor.experience_years} years`,
+        availability: tutor.is_available ? 'Available Now' : 'Next: Tomorrow 2 PM',
+        description: tutor.bio || `Expert in ${tutor.tutor_subjects?.[0]?.subjects?.name || 'various subjects'} with extensive teaching experience.`,
+        specialties: tutor.tutor_subjects?.map((ts: any) => ts.subjects?.name).filter(Boolean) || ['General Teaching']
+      }));
+      setTutors(formattedTutors);
+
+    } catch (error) {
+      console.error('Error loading tutors:', error);
+    } finally {
+      setIsLoading(false);
     }
-  ];
-
-  const subjects = ['all', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'History', 'Literature'];
+  };
 
   const filteredTutors = tutors.filter(tutor => {
     if (selectedSubject === 'all') return true;
@@ -74,6 +57,25 @@ export function TutorsTab() {
     alert(`Sending message to tutor ${tutorId}`);
   };
 
+  if (isLoading) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Find Tutors</h1>
+          <p className="text-gray-600">Loading available tutors...</p>
+        </div>
+        <div className="animate-pulse space-y-4">
+          <div className="bg-gray-200 h-32 rounded-xl"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-gray-200 h-48 rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
@@ -85,17 +87,27 @@ export function TutorsTab() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter by Subject</h3>
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedSubject('all')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              selectedSubject === 'all'
+                ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            All Subjects
+          </button>
           {subjects.map((subject) => (
             <button
-              key={subject}
-              onClick={() => setSelectedSubject(subject)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
-                selectedSubject === subject
+              key={subject.id}
+              onClick={() => setSelectedSubject(subject.name)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedSubject === subject.name
                   ? 'bg-blue-100 text-blue-700 border border-blue-200'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {subject === 'all' ? 'All Subjects' : subject}
+              {subject.name}
             </button>
           ))}
         </div>
@@ -136,7 +148,7 @@ export function TutorsTab() {
             <div className="mb-4">
               <h4 className="text-sm font-medium text-gray-900 mb-2">Specialties</h4>
               <div className="flex flex-wrap gap-2">
-                {tutor.specialties.map((specialty) => (
+                {tutor.specialties.map((specialty: string) => (
                   <span
                     key={specialty}
                     className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full"
@@ -175,6 +187,16 @@ export function TutorsTab() {
           </div>
         ))}
       </div>
+
+      {filteredTutors.length === 0 && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No tutors found</h3>
+          <p className="text-gray-600">Try selecting a different subject or check back later.</p>
+        </div>
+      )}
     </div>
   );
 }

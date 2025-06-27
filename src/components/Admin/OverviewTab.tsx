@@ -1,18 +1,72 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, BookOpen, DollarSign, TrendingUp, Bot, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { supabaseService } from '../../services/supabaseService';
 
 export function OverviewTab() {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeSessions: 0,
+    platformRevenue: 0,
+    aiConfidence: 87.4
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadPlatformStats();
+  }, []);
+
+  const loadPlatformStats = async () => {
+    try {
+      setIsLoading(true);
+      const platformStats = await supabaseService.getPlatformStats();
+      setStats({
+        totalUsers: platformStats.totalUsers,
+        activeSessions: platformStats.activeSessions,
+        platformRevenue: platformStats.totalEarnings,
+        aiConfidence: platformStats.aiConfidence
+      });
+    } catch (error) {
+      console.error('Error loading platform stats:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const platformStats = [
-    { label: 'Total Users', value: '1,247', icon: Users, color: 'bg-blue-100 text-blue-600', change: '+8.2%' },
-    { label: 'Active Sessions', value: '89', icon: BookOpen, color: 'bg-teal-100 text-teal-600', change: '+12.5%' },
-    { label: 'Platform Revenue', value: '$47,320', icon: DollarSign, color: 'bg-green-100 text-green-600', change: '+15.3%' },
-    { label: 'AI Confidence', value: '87.4%', icon: Bot, color: 'bg-purple-100 text-purple-600', change: '+2.1%' }
+    { 
+      label: 'Total Users', 
+      value: stats.totalUsers.toString(), 
+      icon: Users, 
+      color: 'bg-blue-100 text-blue-600', 
+      change: '+8.2%' 
+    },
+    { 
+      label: 'Active Sessions', 
+      value: stats.activeSessions.toString(), 
+      icon: BookOpen, 
+      color: 'bg-teal-100 text-teal-600', 
+      change: '+12.5%' 
+    },
+    { 
+      label: 'Platform Revenue', 
+      value: `$${stats.platformRevenue.toLocaleString()}`, 
+      icon: DollarSign, 
+      color: 'bg-green-100 text-green-600', 
+      change: '+15.3%' 
+    },
+    { 
+      label: 'AI Confidence', 
+      value: `${stats.aiConfidence}%`, 
+      icon: Bot, 
+      color: 'bg-purple-100 text-purple-600', 
+      change: '+2.1%' 
+    }
   ];
 
   const userBreakdown = [
-    { role: 'Students', count: 1089, percentage: 87.3, color: 'bg-blue-500' },
-    { role: 'Tutors', count: 142, percentage: 11.4, color: 'bg-teal-500' },
-    { role: 'Admins', count: 16, percentage: 1.3, color: 'bg-orange-500' }
+    { role: 'Students', count: Math.floor(stats.totalUsers * 0.87), percentage: 87.3, color: 'bg-blue-500' },
+    { role: 'Tutors', count: Math.floor(stats.totalUsers * 0.11), percentage: 11.4, color: 'bg-teal-500' },
+    { role: 'Admins', count: Math.floor(stats.totalUsers * 0.02), percentage: 1.3, color: 'bg-orange-500' }
   ];
 
   const recentActivity = [
@@ -82,6 +136,24 @@ export function OverviewTab() {
         return 'text-blue-600 bg-blue-50';
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Platform Overview</h1>
+          <p className="text-gray-600">Loading platform statistics...</p>
+        </div>
+        <div className="animate-pulse space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-gray-200 h-24 rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
