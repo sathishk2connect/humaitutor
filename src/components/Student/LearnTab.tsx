@@ -18,6 +18,8 @@ export function LearnTab() {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [selectedTutorForSchedule, setSelectedTutorForSchedule] = useState<any>(null);
   const [selectedSessionType, setSelectedSessionType] = useState<'human' | 'ai'>('human');
+  const [hasActiveSession, setHasActiveSession] = useState(false);
+  const [overlayMessage, setOverlayMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -48,6 +50,14 @@ export function LearnTab() {
       if (user) {
         const sessions = await supabaseService.getSessions(user.id, user.role);
         const now = new Date();
+        // Check for active sessions
+        const activeSessionExists = sessions.some(session => {
+          const startTime = new Date(session.start_time || session.scheduled_at || session.created_at);
+          const endTime = new Date(startTime.getTime() + (session.duration_minutes || 60) * 60 * 1000);
+          return now >= startTime && now <= endTime && ['scheduled', 'pending', 'active'].includes(session.status);
+        });
+        setHasActiveSession(activeSessionExists);
+
         const upcoming = sessions
           .filter(session => {
             const isValidStatus = ['scheduled', 'pending', 'active'].includes(session.status);
@@ -81,8 +91,10 @@ export function LearnTab() {
               canJoin: canJoinBeforeStart || isWithinSessionTime,
               amount: session.amount || 0,
               tutorInfo: {
-                id: session.tutor_id,
-                name: session.tutors?.users?.name || 'AI Assistant',
+                id: session.tutor_id || session.id,
+                name: session.type === 'ai' && !session.tutor_id 
+                  ? 'Dr. Sarah Chen'
+                  : session.tutors?.users?.name || 'AI Assistant',
                 subject: session.subjects?.name || 'General',
                 avatar: session.tutors?.users?.avatar_url || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg'
               }
@@ -144,16 +156,27 @@ export function LearnTab() {
   }
   
   const scheduleSession = (tutorId: string, type: 'human' | 'ai') => {
+    if (hasActiveSession) {
+      setOverlayMessage('You have an active session running. Please wait for it to complete before scheduling another session.');
+      setTimeout(() => setOverlayMessage(null), 4000);
+      return;
+    }
+    
     const tutor = enrolledTutors.find(t => t.id === tutorId);
     if (tutor) {
       setSelectedTutorForSchedule(tutor);
       setSelectedSessionType(type);
       setShowScheduleModal(true);
+      // Set the selected tutor for AI sessions to ensure proper display
+      if (type === 'ai') {
+        setSelectedTutor(tutor);
+      }
     }
   };
 
   const handleScheduleComplete = (sessionData: any) => {
-    alert(`Session scheduled successfully! Total cost: $${sessionData.amount}`);
+    setShowScheduleModal(false);
+    setSelectedTutorForSchedule(null);
     loadData();
   };
 
@@ -231,7 +254,13 @@ export function LearnTab() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto relative">
+      {/* Overlay Message */}
+      {overlayMessage && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in">
+          <p className="text-sm font-medium">{overlayMessage}</p>
+        </div>
+      )}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">My Learning</h1>
         <p className="text-gray-600">Connect with your enrolled tutors and AI assistants</p>

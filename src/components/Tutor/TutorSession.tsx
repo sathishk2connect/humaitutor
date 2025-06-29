@@ -54,15 +54,16 @@ export function TutorSession({ sessionId, studentInfo, onEndSession }: TutorSess
     // Subscribe to real-time messages
     const unsubscribe = chatService.subscribeToMessages(sessionId, (newMessages) => {
       setMessages(newMessages);
+       // Only send welcome message if no messages exist and we haven't sent it before
+      if (newMessages.length === 0) {
+        // Add welcome message
+        chatService.sendMessage(sessionId, {
+          sender: 'system',
+          content: `Tutor has joined the session with ${studentInfo.name}. You can now chat and start video calls.`,
+          senderName: 'System'
+        });
+      }
     });
-
-    // Add welcome message
-    chatService.sendMessage(sessionId, {
-      sender: 'system',
-      content: `Tutor has joined the session with ${studentInfo.name}. You can now chat and start video calls.`,
-      senderName: 'System'
-    });
-
     return () => unsubscribe();
   }, [sessionId, studentInfo.name]);
 
@@ -78,7 +79,7 @@ export function TutorSession({ sessionId, studentInfo, onEndSession }: TutorSess
   }
 
   return (
-    <div className="max-w-4xl mx-auto h-screen flex flex-col">
+    <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -104,9 +105,6 @@ export function TutorSession({ sessionId, studentInfo, onEndSession }: TutorSess
             className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
           >
             <Video className="w-5 h-5" />
-          </button>
-          <button className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors">
-            <Phone className="w-5 h-5" />
           </button>
         </div>
       </div>

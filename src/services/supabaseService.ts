@@ -228,31 +228,54 @@ export class SupabaseService {
 
   // Session methods
   async getSessions(userId: string, userRole: string) {
-    let query = supabase
-      .from('sessions')
-      .select(`
-        *,
-        students(
-          users(name, avatar_url)
-        ),
-        tutors(
-          users(name, avatar_url)
-        ),
-        subjects(name)
-      `);
-
+    let sessions;
+    
     if (userRole === 'student') {
       const student = await this.getStudentByUserId(userId);
-      query = query.eq('student_id', student.id);
+      const { data, error } = await supabase
+        .from('sessions')
+        .select(`
+          *,
+          tutors(
+            users(name, avatar_url)
+          ),
+          subjects(name)
+        `)
+        .eq('student_id', student.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      sessions = data;
     } else if (userRole === 'tutor') {
       const tutor = await this.getTutorByUserId(userId);
-      query = query.eq('tutor_id', tutor.id);
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('tutor_id', tutor.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Manually fetch student and subject data to avoid RLS issues
+      const enrichedSessions = await Promise.all(
+        data.map(async (session) => {
+          const [studentResult, subjectResult] = await Promise.all([
+            supabase.from('students').select('users(name, avatar_url)').eq('id', session.student_id).single(),
+            supabase.from('subjects').select('name').eq('id', session.subject_id).single()
+          ]);
+          
+          return {
+            ...session,
+            students: studentResult.data,
+            subjects: subjectResult.data
+          };
+        })
+      );
+      
+      sessions = enrichedSessions;
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data;
+    return sessions || [];
   }
 
   async createSession(sessionData: {
@@ -297,6 +320,14 @@ export class SupabaseService {
 
     if (error) throw error;
     return data;
+  }
+
+  async acceptSession(sessionId: string) {
+    return this.updateSession(sessionId, { status: 'scheduled' });
+  }
+
+  async rejectSession(sessionId: string) {
+    return this.updateSession(sessionId, { status: 'cancelled' });
   }
 
   // Content methods

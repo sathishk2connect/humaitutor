@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, DollarSign, User, Bot, CheckCircle } from 'lucide-react';
+import { X, Calendar, Clock, DollarSign, User, Bot } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -25,7 +25,7 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
   const [duration, setDuration] = useState(1);
   const [studentBalance, setStudentBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const hourlyRate = sessionType === 'ai' ? Math.round(tutor.hourlyRate * 0.3) : tutor.hourlyRate;
   const totalCost = hourlyRate * duration;
@@ -34,9 +34,6 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
   useEffect(() => {
     if (isOpen && user) {
       loadStudentBalance();
-      // Reset states when modal opens
-      setIsSuccess(false);
-      setIsLoading(false);
       // Set default date/time for "later" option
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -58,6 +55,7 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
     if (!canAfford) return;
 
     setIsLoading(true);
+    setMessage(null);
     try {
       const student = await supabaseService.getStudentByUserId(user!.id);
       const subjects = await supabaseService.getSubjects();
@@ -85,21 +83,12 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
       };
 
       await supabaseService.createSession(sessionData);
-      
-      // Show success state
-      setIsSuccess(true);
-      
-      // Call the onSchedule callback
+      setMessage({ type: 'success', text: 'Session scheduled successfully!' });
       onSchedule(sessionData);
-      
-      // Close modal after a brief delay to show success state
-      setTimeout(() => {
-        onClose();
-      }, 1500);
-      
+      setTimeout(() => onClose(), 1500);
     } catch (error) {
       console.error('Error scheduling session:', error);
-      // You could add error state handling here if needed
+      setMessage({ type: 'error', text: 'Failed to schedule session. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -133,7 +122,7 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
                 <User className="w-5 h-5 text-blue-600" />
               )}
               <span className="text-sm font-medium">
-                'Session'
+                {sessionType === 'ai' ? 'AI Session' : 'Human Session'}
               </span>
             </div>
           </div>
@@ -241,15 +230,14 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
             </div>
           )}
 
-          {/* Success Message */}
-          {isSuccess && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <p className="text-sm text-green-700 font-medium">
-                  Session scheduled successfully! Total cost: ${totalCost}
-                </p>
-              </div>
+          {/* Message Display */}
+          {message && (
+            <div className={`p-3 rounded-lg mb-4 ${
+              message.type === 'success' 
+                ? 'bg-green-50 border border-green-200 text-green-700'
+                : 'bg-red-50 border border-red-200 text-red-700'
+            }`}>
+              <p className="text-sm font-medium">{message.text}</p>
             </div>
           )}
 
@@ -257,35 +245,20 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
           <div className="flex space-x-3">
             <button
               onClick={onClose}
-              disabled={isLoading || isSuccess}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSchedule}
-              disabled={!canAfford || isLoading || isSuccess}
-              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                isSuccess
-                  ? 'bg-green-600 text-white'
-                  : canAfford && !isLoading
+              disabled={!canAfford || isLoading}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium ${
+                canAfford && !isLoading
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              {isSuccess ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Scheduled!</span>
-                </div>
-              ) : isLoading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Scheduling...</span>
-                </div>
-              ) : (
-                'Schedule Session'
-              )}
+              {isLoading ? 'Scheduling...' : message?.type === 'success' ? '✓ Scheduled' : 'Schedule Session'}
             </button>
           </div>
         </div>

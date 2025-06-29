@@ -121,7 +121,7 @@ export function AITutorSession({ sessionId, onEndSession, tutorInfo }: AITutorSe
   }
 
   return (
-    <div className="max-w-4xl mx-auto h-screen flex flex-col">
+    <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">

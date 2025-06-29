@@ -67,7 +67,6 @@ export function TutorsTab() {
   };
 
   const handleScheduleComplete = (sessionData: any) => {
-    alert(`Session scheduled successfully! Total cost: $${sessionData.amount}`);
     // Refresh data or navigate to sessions
   };
 

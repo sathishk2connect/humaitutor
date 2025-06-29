@@ -31,8 +31,8 @@ export function SessionsTab() {
         },
         subject: session.subjects?.name || 'General',
         type: session.type === 'human' ? 'Live Session' : 'AI Session',
-        date: new Date(session.created_at).toLocaleDateString(),
-        time: new Date(session.created_at).toLocaleTimeString(),
+        date: new Date(session.scheduled_at || session.created_at).toLocaleDateString(),
+        time: new Date(session.scheduled_at || session.created_at).toLocaleTimeString(),
         duration: `${session.duration_minutes || 60} min`,
         status: session.video_call_status === 'waiting' ? 'active' : session.status,
         rating: session.student_rating,
@@ -57,6 +57,24 @@ export function SessionsTab() {
       avatar: session.student.avatar
     });
     setActiveSession(session.id);
+  };
+
+  const acceptSession = async (sessionId: string) => {
+    try {
+      await supabaseService.acceptSession(sessionId);
+      loadSessions();
+    } catch (error) {
+      console.error('Error accepting session:', error);
+    }
+  };
+
+  const rejectSession = async (sessionId: string) => {
+    try {
+      await supabaseService.rejectSession(sessionId);
+      loadSessions();
+    } catch (error) {
+      console.error('Error rejecting session:', error);
+    }
   };
 
   if (activeSession && selectedStudent) {
@@ -140,6 +158,7 @@ export function SessionsTab() {
   const filteredSessions = allSessions.filter(session => {
     if (filter === 'all') return true;
     if (filter === 'active') return session.status === 'active' || session.video_call_status === 'waiting';
+    if (filter === 'pending') return session.status === 'pending';
     return session.status === filter;
   });
 
@@ -147,10 +166,14 @@ export function SessionsTab() {
     switch (status) {
       case 'completed':
         return 'bg-green-100 text-green-700';
-      case 'upcoming':
+      case 'scheduled':
         return 'bg-blue-100 text-blue-700';
-      case 'pending_review':
+      case 'pending':
         return 'bg-yellow-100 text-yellow-700';
+      case 'active':
+        return 'bg-green-100 text-green-700';
+      case 'cancelled':
+        return 'bg-red-100 text-red-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
@@ -160,10 +183,14 @@ export function SessionsTab() {
     switch (status) {
       case 'completed':
         return 'Completed';
-      case 'upcoming':
-        return 'Upcoming';
-      case 'pending_review':
-        return 'Review Needed';
+      case 'scheduled':
+        return 'Scheduled';
+      case 'pending':
+        return 'Pending Approval';
+      case 'active':
+        return 'Active';
+      case 'cancelled':
+        return 'Cancelled';
       default:
         return status;
     }
@@ -183,7 +210,7 @@ export function SessionsTab() {
             <Filter className="w-5 h-5 text-gray-600" />
             <span className="font-medium text-gray-900">Filter Sessions:</span>
             <div className="flex space-x-2">
-              {['all', 'active', 'upcoming', 'completed', 'pending_review'].map((filterOption) => (
+              {['all', 'pending', 'active', 'scheduled', 'completed', 'cancelled'].map((filterOption) => (
                 <button
                   key={filterOption}
                   onClick={() => setFilter(filterOption)}
@@ -251,6 +278,23 @@ export function SessionsTab() {
             )}
 
             <div className="flex items-center space-x-3">
+              {session.status === 'pending' && (
+                <>
+                  <button 
+                    onClick={() => acceptSession(session.id)}
+                    className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <span>Accept</span>
+                  </button>
+                  <button 
+                    onClick={() => rejectSession(session.id)}
+                    className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <span>Reject</span>
+                  </button>
+                </>
+              )}
+              
               {(session.status === 'active' || session.video_call_status === 'waiting') && (
                 <>
                   <button 
@@ -270,7 +314,7 @@ export function SessionsTab() {
                 </>
               )}
               
-              {session.status === 'upcoming' && (
+              {session.status === 'scheduled' && (
                 <>
                   <button 
                     onClick={() => joinSession(session)}
@@ -287,13 +331,6 @@ export function SessionsTab() {
                     <span>Message Student</span>
                   </button>
                 </>
-              )}
-              
-              {session.status === 'pending_review' && (
-                <button className="flex items-center space-x-2 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors">
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Review AI Session</span>
-                </button>
               )}
               
               {session.status === 'completed' && (

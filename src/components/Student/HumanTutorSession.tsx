@@ -20,7 +20,6 @@ export function HumanTutorSession({ sessionId, tutorInfo, onEndSession }: HumanT
   const [messages, setMessages] = useState<any[]>([]);
   const [isVideoCall, setIsVideoCall] = useState(false);
   const [callStatus, setCallStatus] = useState<'idle' | 'waiting' | 'active'>('idle');
-  const welcomeMessageSentRef = useRef(false);
 
   const endVideoCall = () => {
     setIsVideoCall(false);
@@ -57,8 +56,7 @@ export function HumanTutorSession({ sessionId, tutorInfo, onEndSession }: HumanT
       setMessages(newMessages);
       
       // Only send welcome message if no messages exist and we haven't sent it before
-      if (newMessages.length === 0 && !welcomeMessageSentRef.current) {
-        welcomeMessageSentRef.current = true;
+      if (newMessages.length === 0) {
         chatService.sendMessage(sessionId, {
           sender: 'system',
           content: `Welcome to your session with ${tutorInfo.name}! You can interact with your tutor and their AI replica through this chat.`,
@@ -82,7 +80,7 @@ export function HumanTutorSession({ sessionId, tutorInfo, onEndSession }: HumanT
   }
 
   return (
-    <div className="max-w-4xl mx-auto h-screen flex flex-col">
+    <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
