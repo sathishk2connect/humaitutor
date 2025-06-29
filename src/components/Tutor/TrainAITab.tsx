@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, FileText, Video, Mic, Bot, CheckCircle, AlertCircle, Play, User, Sparkles, Camera, Plus, Save, X } from 'lucide-react';
 import { VideoReplicaModal } from './VideoReplicaModal';
 
@@ -36,8 +36,14 @@ export function TrainAITab() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [tutorContext, setTutorContext] = useState('');
+  const [aiTutorData, setAiTutorData] = useState({
+    name: '',
+    personality: '',
+    teaching_context: ''
+  });
+  const [replicaId, setReplicaId] = useState('');
   const [isSavingContext, setIsSavingContext] = useState(false);
+  const [isSavingReplica, setIsSavingReplica] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     subject: '',
     description: '',
@@ -54,6 +60,33 @@ export function TrainAITab() {
     id: 'tutor_123',
     name: 'Dr. Sarah Johnson',
     subject: 'Mathematics'
+  };
+
+  useEffect(() => {
+    loadAITutorData();
+  }, []);
+
+  const loadAITutorData = async () => {
+    try {
+      // TODO: Load AI tutor data from database
+      // const aiTutor = await supabaseService.getAITutorByTutorId(currentTutor.id);
+      // if (aiTutor) {
+      //   setAiTutorData({
+      //     name: aiTutor.name,
+      //     personality: aiTutor.personality,
+      //     teaching_context: aiTutor.teaching_context
+      //   });
+      // }
+      
+      // Mock data for demo
+      setAiTutorData({
+        name: `${currentTutor.name} (AI Assistant)`,
+        personality: 'Friendly, patient, and encouraging AI tutor that adapts to student learning pace',
+        teaching_context: `AI Assistant for ${currentTutor.name} - Specialized in ${currentTutor.subject}. Available 24/7 to provide personalized tutoring based on ${currentTutor.name}'s teaching methodology.`
+      });
+    } catch (error) {
+      console.error('Error loading AI tutor data:', error);
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -77,14 +110,42 @@ export function TrainAITab() {
     setIsModalOpen(false);
   };
 
-  const saveContext = () => {
-    if (!tutorContext.trim()) return;
+  const saveContext = async () => {
+    if (!aiTutorData.name.trim() || !aiTutorData.personality.trim() || !aiTutorData.teaching_context.trim()) {
+      alert('Please fill in all fields');
+      return;
+    }
     
     setIsSavingContext(true);
-    setTimeout(() => {
-      alert('Context saved successfully!');
+    try {
+      // TODO: Update AI tutor data in database
+      // await supabaseService.updateAITutor(currentTutor.id, aiTutorData);
+      alert('AI Assistant updated successfully!');
+    } catch (error) {
+      console.error('Error saving AI tutor data:', error);
+      alert('Failed to save. Please try again.');
+    } finally {
       setIsSavingContext(false);
-    }, 1000);
+    }
+  };
+
+  const saveReplicaId = async () => {
+    if (!replicaId.trim()) {
+      alert('Please enter a valid replica ID');
+      return;
+    }
+    
+    setIsSavingReplica(true);
+    try {
+      // TODO: Update AI tutor replica_id in database
+      // await supabaseService.updateAITutorReplicaId(currentTutor.id, replicaId);
+      alert('Replica ID saved successfully!');
+    } catch (error) {
+      console.error('Error saving replica ID:', error);
+      alert('Failed to save replica ID. Please try again.');
+    } finally {
+      setIsSavingReplica(false);
+    }
   };
 
   return (
@@ -102,67 +163,47 @@ export function TrainAITab() {
               <FileText className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Teaching Context</h3>
+              <h3 className="text-lg font-semibold text-gray-900">AI Assistant Traits</h3>
               <p className="text-sm text-gray-600">Provide context for your AI tutor</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Expertise/Subjects</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">AI Assistant Name</label>
               <input
                 type="text"
-                value={contextForm.expertise}
-                onChange={(e) => setContextForm(prev => ({...prev, expertise: e.target.value}))}
-                placeholder="e.g., Advanced Mathematics, Calculus, Algebra"
+                value={aiTutorData.name}
+                onChange={(e) => setAiTutorData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., Dr. Sarah's AI Assistant"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Target Student Level</label>
-              <select
-                value={contextForm.targetLevel}
-                onChange={(e) => setContextForm(prev => ({...prev, targetLevel: e.target.value}))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select level</option>
-                <option value="elementary">Elementary</option>
-                <option value="middle-school">Middle School</option>
-                <option value="high-school">High School</option>
-                <option value="undergraduate">Undergraduate</option>
-                <option value="graduate">Graduate</option>
-                <option value="professional">Professional</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Personal Traits</label>
-              <input
-                type="text"
-                value={contextForm.traits}
-                onChange={(e) => setContextForm(prev => ({...prev, traits: e.target.value}))}
-                placeholder="e.g., Patient, Encouraging, Detail-oriented, Humorous"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Teaching Context & Style
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Personality</label>
               <textarea
-                value={tutorContext}
-                onChange={(e) => setTutorContext(e.target.value)}
+                value={aiTutorData.personality}
+                onChange={(e) => setAiTutorData(prev => ({ ...prev, personality: e.target.value }))}
+                placeholder="Describe the AI's personality traits (e.g., friendly, patient, encouraging, professional...)"
+                className="w-full h-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Teaching Context</label>
+              <textarea
+                value={aiTutorData.teaching_context}
+                onChange={(e) => setAiTutorData(prev => ({ ...prev, teaching_context: e.target.value }))}
                 placeholder="Describe your teaching style, methodology, key concepts you focus on, and any specific approaches you use with students..."
-                className="w-full h-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               />
             </div>
             
             <div className="flex space-x-3">
               <button
                 onClick={saveContext}
-                disabled={!tutorContext.trim() || isSavingContext}
+                disabled={!aiTutorData.name.trim() || !aiTutorData.personality.trim() || !aiTutorData.teaching_context.trim() || isSavingContext}
                 className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
               >
                 {isSavingContext ? (
@@ -193,7 +234,7 @@ export function TrainAITab() {
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Create AI Video Replica</h3>
+              <h3 className="text-lg font-semibold text-gray-900">AI Video Replica (Powered by Tavus)</h3>
               <p className="text-sm text-gray-600">Upload videos to create your conversational AI twin</p>
             </div>
           </div>
@@ -215,15 +256,40 @@ export function TrainAITab() {
             </button>
           </div>
           
-          <div className="mt-4 text-xs text-gray-600">
-            <p className="font-medium mb-1">What you can do:</p>
-            <ul className="space-y-1 text-gray-500">
-              <li>• Create multiple teaching personas</li>
-              <li>• Have AI conversations with students</li>
-              <li>• Maintain your teaching style 24/7</li>
-              <li>• Scale your tutoring reach</li>
-            </ul>
+          {/* Replica ID Section */}
+          <div className="mt-6 pt-6 border-t border-purple-200">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Or Connect Existing Replica</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tavus Replica ID</label>
+                <input
+                  type="text"
+                  value={replicaId}
+                  onChange={(e) => setReplicaId(e.target.value)}
+                  placeholder="Enter your Tavus replica ID (e.g., rb17cf590e15)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+              <button
+                onClick={saveReplicaId}
+                disabled={!replicaId.trim() || isSavingReplica}
+                className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+              >
+                {isSavingReplica ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save Replica ID</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+          
         </div>
       </div>
 

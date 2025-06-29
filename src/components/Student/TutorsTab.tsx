@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Star, Clock, DollarSign, Calendar, MessageSquare, Video } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Star, Clock, DollarSign, Calendar, MessageSquare, Video, Bot } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
+import { ScheduleSessionModal } from './ScheduleSessionModal';
 
 export function TutorsTab() {
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [tutors, setTutors] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedTutorForSchedule, setSelectedTutorForSchedule] = useState<any>(null);
+  const [selectedSessionType, setSelectedSessionType] = useState<'human' | 'ai'>('human');
 
   useEffect(() => {
     loadData();
@@ -16,20 +20,24 @@ export function TutorsTab() {
     try {
       setIsLoading(true);
       
+      // Debug: Check what's in the database
+      await supabaseService.debugTables();
+      
       // Load subjects
       const subjectsData = await supabaseService.getSubjects();
       setSubjects(subjectsData);
 
       // Load tutors
       const tutorsData = await supabaseService.getTutors();
+      console.log("Tutors :" + tutorsData)
       const formattedTutors = tutorsData.map(tutor => ({
         id: tutor.id,
-        name: tutor.users.name,
+        name: tutor.users?.name || 'Unknown Tutor',
         subjects: tutor.tutor_subjects?.map((ts: any) => ts.subjects?.name).filter(Boolean) || ['General'],
         rating: tutor.rating,
         reviews: Math.floor(Math.random() * 200) + 50, // Mock review count
         hourlyRate: tutor.hourly_rate,
-        avatar: tutor.users.avatar_url || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+        avatar: tutor.users?.avatar_url || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
         experience: `${tutor.experience_years} years`,
         availability: tutor.is_available ? 'Available Now' : 'Next: Tomorrow 2 PM',
         description: tutor.bio || `Expert in ${tutor.tutor_subjects?.[0]?.subjects?.name || 'various subjects'} with extensive teaching experience.`,
@@ -49,8 +57,18 @@ export function TutorsTab() {
     return tutor.subjects.includes(selectedSubject);
   });
 
-  const scheduleSession = (tutorId: string) => {
-    alert(`Scheduling session with tutor ${tutorId}`);
+  const scheduleSession = (tutorId: string, type: 'human' | 'ai') => {
+    const tutor = tutors.find(t => t.id === tutorId);
+    if (tutor) {
+      setSelectedTutorForSchedule(tutor);
+      setSelectedSessionType(type);
+      setShowScheduleModal(true);
+    }
+  };
+
+  const handleScheduleComplete = (sessionData: any) => {
+    alert(`Session scheduled successfully! Total cost: $${sessionData.amount}`);
+    // Refresh data or navigate to sessions
   };
 
   const sendMessage = (tutorId: string) => {
@@ -122,6 +140,9 @@ export function TutorsTab() {
                 src={tutor.avatar}
                 alt={tutor.name}
                 className="w-16 h-16 rounded-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2';
+                }}
               />
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900">{tutor.name}</h3>
@@ -138,6 +159,10 @@ export function TutorsTab() {
                   <div className="flex items-center space-x-1">
                     <DollarSign className="w-4 h-4" />
                     <span>${tutor.hourlyRate}/hr</span>
+                  </div>
+                   <div className="flex items-center space-x-1">
+                    <Bot className="w-4 h-4" />
+                    <span>${Math.round(tutor.hourlyRate * 0.3)}/hr</span>
                   </div>
                 </div>
               </div>
@@ -168,7 +193,7 @@ export function TutorsTab() {
               </div>
               
               <div className="flex items-center space-x-2">
-                <button
+                 <button
                   onClick={() => sendMessage(tutor.id)}
                   className="flex items-center space-x-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors"
                 >
@@ -176,11 +201,18 @@ export function TutorsTab() {
                   <span className="text-sm">Message</span>
                 </button>
                 <button
-                  onClick={() => scheduleSession(tutor.id)}
-                  className="flex items-center space-x-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() => scheduleSession(tutor.id, 'human')}
+                  className="flex items-center space-x-1 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Video className="w-4 h-4" />
-                  <span className="text-sm font-medium">Schedule</span>
+                  <span className="text-sm font-medium">Human Session</span>
+                </button>
+                                <button
+                  onClick={() => scheduleSession(tutor.id, 'ai')}
+                  className="flex items-center space-x-1 bg-purple-100 text-purple-700 px-3 py-2 rounded-lg hover:bg-purple-200 transition-colors"
+                >
+                  <Bot className="w-4 h-4" />
+                  <span className="text-sm font-medium">AI Session</span>
                 </button>
               </div>
             </div>
@@ -196,6 +228,20 @@ export function TutorsTab() {
           <h3 className="text-lg font-medium text-gray-900 mb-2">No tutors found</h3>
           <p className="text-gray-600">Try selecting a different subject or check back later.</p>
         </div>
+      )}
+
+      {/* Schedule Session Modal */}
+      {showScheduleModal && selectedTutorForSchedule && (
+        <ScheduleSessionModal
+          isOpen={showScheduleModal}
+          onClose={() => {
+            setShowScheduleModal(false);
+            setSelectedTutorForSchedule(null);
+          }}
+          tutor={selectedTutorForSchedule}
+          sessionType={selectedSessionType}
+          onSchedule={handleScheduleComplete}
+        />
       )}
     </div>
   );

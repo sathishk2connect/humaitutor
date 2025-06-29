@@ -20,6 +20,14 @@ interface TavusConversationRequest {
   replica_id: string;
   conversation_name?: string;
   persona_id?: string;
+  conversational_context?: string;
+  callback_url?: string | null;
+  properties?: {
+    max_call_duration?: number;
+    participant_left_timeout?: number;
+    participant_absent_timeout?: number;
+    enable_recording?: boolean;
+  };
 }
 
 class TavusApiService {
@@ -90,14 +98,14 @@ class TavusApiService {
   }
 
   // Create a conversation session with a replica
-  async createConversation(request: TavusConversationRequest): Promise<{ conversation_id: string; conversation_url: string }> {
+  async createConversation(request: any): Promise<{ conversation_id: string; conversation_url: string }> {
     return this.makeRequest('/conversations', {
       method: 'POST',
-      body: JSON.stringify({
-        replica_id: request.replica_id
-      }),
+      body: JSON.stringify(request),
     });
   }
+
+
 
   // Delete a replica
   async deleteReplica(replicaId: string): Promise<void> {

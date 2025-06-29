@@ -1,10 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, MessageSquare, Video, Star, Filter } from 'lucide-react';
+import { supabaseService } from '../../services/supabaseService';
+import { useAuth } from '../../contexts/AuthContext';
+import { TutorSession } from './TutorSession';
 
 export function SessionsTab() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState('all');
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [activeSession, setActiveSession] = useState<string | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const sessions = [
+  useEffect(() => {
+    if (user) {
+      loadSessions();
+    }
+  }, [user]);
+
+  const loadSessions = async () => {
+    try {
+      setIsLoading(true);
+      const sessionsData = await supabaseService.getSessions(user!.id, 'tutor');
+      
+      const formattedSessions = sessionsData.map(session => ({
+        id: session.id,
+        student: {
+          name: session.students?.users?.name || 'Unknown Student',
+          avatar: session.students?.users?.avatar_url || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg'
+        },
+        subject: session.subjects?.name || 'General',
+        type: session.type === 'human' ? 'Live Session' : 'AI Session',
+        date: new Date(session.created_at).toLocaleDateString(),
+        time: new Date(session.created_at).toLocaleTimeString(),
+        duration: `${session.duration_minutes || 60} min`,
+        status: session.video_call_status === 'waiting' ? 'active' : session.status,
+        rating: session.student_rating,
+        feedback: session.student_feedback,
+        earnings: `$${session.amount || 0}`,
+        video_call_status: session.video_call_status
+      }));
+      
+      setSessions(formattedSessions);
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const joinSession = (session: any) => {
+    setSelectedStudent({
+      id: session.student.id,
+      name: session.student.name,
+      subject: session.subject,
+      avatar: session.student.avatar
+    });
+    setActiveSession(session.id);
+  };
+
+  if (activeSession && selectedStudent) {
+    return (
+      <TutorSession
+        sessionId={activeSession}
+        studentInfo={selectedStudent}
+        onEndSession={() => {
+          setActiveSession(null);
+          setSelectedStudent(null);
+          loadSessions();
+        }}
+      />
+    );
+  }
+
+  const mockSessions = [
     {
       id: '1',
       student: {
@@ -67,8 +136,10 @@ export function SessionsTab() {
     }
   ];
 
-  const filteredSessions = sessions.filter(session => {
+  const allSessions = isLoading ? mockSessions : sessions;
+  const filteredSessions = allSessions.filter(session => {
     if (filter === 'all') return true;
+    if (filter === 'active') return session.status === 'active' || session.video_call_status === 'waiting';
     return session.status === filter;
   });
 
@@ -112,7 +183,7 @@ export function SessionsTab() {
             <Filter className="w-5 h-5 text-gray-600" />
             <span className="font-medium text-gray-900">Filter Sessions:</span>
             <div className="flex space-x-2">
-              {['all', 'upcoming', 'completed', 'pending_review'].map((filterOption) => (
+              {['all', 'active', 'upcoming', 'completed', 'pending_review'].map((filterOption) => (
                 <button
                   key={filterOption}
                   onClick={() => setFilter(filterOption)}
@@ -180,13 +251,38 @@ export function SessionsTab() {
             )}
 
             <div className="flex items-center space-x-3">
+              {(session.status === 'active' || session.video_call_status === 'waiting') && (
+                <>
+                  <button 
+                    onClick={() => joinSession(session)}
+                    className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Video className="w-4 h-4" />
+                    <span>{session.video_call_status === 'waiting' ? 'Join Waiting Student' : 'Join Session'}</span>
+                  </button>
+                  <button 
+                    onClick={() => joinSession(session)}
+                    className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Chat</span>
+                  </button>
+                </>
+              )}
+              
               {session.status === 'upcoming' && (
                 <>
-                  <button className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                  <button 
+                    onClick={() => joinSession(session)}
+                    className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
                     <Video className="w-4 h-4" />
                     <span>Join Session</span>
                   </button>
-                  <button className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                  <button 
+                    onClick={() => joinSession(session)}
+                    className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
                     <MessageSquare className="w-4 h-4" />
                     <span>Message Student</span>
                   </button>

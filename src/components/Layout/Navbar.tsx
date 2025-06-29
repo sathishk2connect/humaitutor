@@ -10,7 +10,7 @@ export function Navbar() {
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <div className="w-14 h-8 bg-gradient-to-r from-blue-600 to-teal-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">Humai</span>
+              <span className="text-white font-bold text-sm">HumAI</span>
             </div>
             <h1 className="text-xl font-bold text-gray-900">Tutor</h1>
           </div>

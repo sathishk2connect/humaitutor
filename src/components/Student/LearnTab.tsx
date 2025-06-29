@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, User, Calendar, Clock, Star } from 'lucide-react';
+import { Bot, User, Calendar, Clock, Star, MessageSquare, Video } from 'lucide-react';
 import { AITutorSession } from './AITutorSession';
+import { HumanTutorSession } from './HumanTutorSession';
 import { TavusConversation } from './TavusConversation';
+import { ScheduleSessionModal } from './ScheduleSessionModal';
 import { supabaseService } from '../../services/supabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -13,6 +15,9 @@ export function LearnTab() {
   const [enrolledTutors, setEnrolledTutors] = useState<any[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedTutorForSchedule, setSelectedTutorForSchedule] = useState<any>(null);
+  const [selectedSessionType, setSelectedSessionType] = useState<'human' | 'ai'>('human');
 
   useEffect(() => {
     if (user) {
@@ -28,9 +33,9 @@ export function LearnTab() {
       const tutors = await supabaseService.getTutors();
       const formattedTutors = tutors.map(tutor => ({
         id: tutor.id,
-        name: tutor.users.name,
+        name: tutor.users?.name || 'Unknown Tutor',
         subject: tutor.tutor_subjects?.[0]?.subjects?.name || 'General',
-        avatar: tutor.users.avatar_url || '/api/placeholder/60/60',
+        avatar: tutor.users?.avatar_url || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
         rating: tutor.rating,
         isOnline: tutor.is_available,
         nextSession: '2024-01-20 14:00',
@@ -42,20 +47,47 @@ export function LearnTab() {
       // Load upcoming sessions
       if (user) {
         const sessions = await supabaseService.getSessions(user.id, user.role);
+        const now = new Date();
         const upcoming = sessions
-          .filter(session => session.status === 'scheduled')
+          .filter(session => {
+            const isValidStatus = ['scheduled', 'pending', 'active'].includes(session.status);
+            const endTime = session.end_time ? new Date(session.end_time) : null;
+            const isNotCompleted = !endTime || endTime > now;
+            return isValidStatus && isNotCompleted;
+          })
           .slice(0, 3)
-          .map(session => ({
-            id: session.id,
-            tutor: session.tutors?.users?.name || 'AI Assistant',
-            subject: session.subjects?.name || 'General',
-            date: new Date(session.scheduled_at || session.created_at).toISOString().split('T')[0],
-            time: new Date(session.scheduled_at || session.created_at).toLocaleTimeString('en-US', { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            }),
-            type: session.title || `${session.type} Session`
-          }));
+          .map(session => {
+            const scheduledDate = new Date(session.scheduled_at || session.created_at);
+            const now = new Date();
+            const hoursUntilSession = (scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+            const sessionEndTime = new Date(scheduledDate.getTime() + (session.duration_minutes || 60) * 60 * 1000);
+            const isWithinSessionTime = now >= scheduledDate && now <= sessionEndTime;
+            const canJoinBeforeStart = Math.abs(hoursUntilSession * 60) <= 5; // Within 5 minutes of start
+            
+            return {
+              id: session.id,
+              tutor: session.tutors?.users?.name || 'AI Assistant',
+              subject: session.subjects?.name || 'General',
+              date: scheduledDate.toISOString().split('T')[0],
+              time: scheduledDate.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              }),
+              type: session.title || `${session.type} Session`,
+              duration: `${session.duration_minutes || 60} min`,
+              status: session.status,
+              sessionType: session.type,
+              canReschedule: hoursUntilSession > 6 && session.status !== 'active',
+              canJoin: canJoinBeforeStart || isWithinSessionTime,
+              amount: session.amount || 0,
+              tutorInfo: {
+                id: session.tutor_id,
+                name: session.tutors?.users?.name || 'AI Assistant',
+                subject: session.subjects?.name || 'General',
+                avatar: session.tutors?.users?.avatar_url || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg'
+              }
+            };
+          });
         setUpcomingSessions(upcoming);
       }
     } catch (error) {
@@ -71,6 +103,19 @@ export function LearnTab() {
         tutorId={selectedTutor.id}
         tutorName={selectedTutor.name}
         subject={selectedTutor.subject}
+        onEndSession={() => {
+          setActiveSession(null);
+          setSelectedTutor(null);
+        }}
+      />
+    );
+  }
+
+  if (activeSession && sessionType === 'human' && selectedTutor) {
+    return (
+      <HumanTutorSession
+        sessionId={activeSession}
+        tutorInfo={selectedTutor}
         onEndSession={() => {
           setActiveSession(null);
           setSelectedTutor(null);
@@ -97,6 +142,36 @@ export function LearnTab() {
       />
     );
   }
+  
+  const scheduleSession = (tutorId: string, type: 'human' | 'ai') => {
+    const tutor = enrolledTutors.find(t => t.id === tutorId);
+    if (tutor) {
+      setSelectedTutorForSchedule(tutor);
+      setSelectedSessionType(type);
+      setShowScheduleModal(true);
+    }
+  };
+
+  const handleScheduleComplete = (sessionData: any) => {
+    alert(`Session scheduled successfully! Total cost: $${sessionData.amount}`);
+    loadData();
+  };
+
+  const joinSession = (session: any) => {
+    if (session.sessionType === 'ai') {
+      setSessionType('ai');
+      setSelectedTutor(session.tutorInfo);
+      setActiveSession(session.id);
+    } else {
+      setSessionType('human');
+      setSelectedTutor(session.tutorInfo);
+      setActiveSession(session.id);
+    }
+  };
+
+  const sendMessage = (tutorId: string) => {
+    alert(`Sending message to tutor ${tutorId}`);
+  };
 
   const startSession = async (type: 'ai' | 'human' | 'tavus', tutor?: any) => {
     try {
@@ -122,7 +197,7 @@ export function LearnTab() {
         const session = await supabaseService.createSession(sessionData);
         
         setSessionType(type);
-        if ((type === 'tavus' || type === 'ai') && tutor) {
+        if (tutor) {
           setSelectedTutor(tutor);
         }
         setActiveSession(session.id);
@@ -131,10 +206,12 @@ export function LearnTab() {
       console.error('Error starting session:', error);
       // Fallback to demo mode
       setSessionType(type);
-      if ((type === 'tavus' || type === 'ai') && tutor) {
+      if (tutor) {
         setSelectedTutor(tutor);
       }
-      setActiveSession(`session-${type}-${tutor?.id || 'ai'}-${Date.now()}`);
+      // Generate a proper UUID for demo session
+      const demoSessionId = crypto.randomUUID();
+      setActiveSession(demoSessionId);
     }
   };
 
@@ -169,9 +246,14 @@ export function LearnTab() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="relative">
-                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                      <User className="w-6 h-6 text-gray-500" />
-                    </div>
+                    <img
+                      src={tutor.avatar}
+                      alt={tutor.name}
+                      className="w-12 h-12 rounded-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2';
+                      }}
+                    />
                     <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
                       tutor.isOnline ? 'bg-green-500' : 'bg-gray-400'
                     }`} />
@@ -197,25 +279,29 @@ export function LearnTab() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => startSession('human', tutor)}
-                    disabled={!tutor.isOnline}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      tutor.isOnline
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    }`}
+                    <button
+                    onClick={() => sendMessage(tutor.id)}
+                    className="flex items-center space-x-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    {tutor.isOnline ? 'Start Session' : 'Schedule'}
+                    <MessageSquare className="w-4 h-4" />
+                    <span className="text-sm">Message</span>
                   </button>
                   <button
-                    onClick={() => startSession('ai', tutor)}
-                    className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors flex items-center space-x-1"
+                    onClick={() => scheduleSession(tutor.id, 'human')}
+                    className="flex items-center space-x-1 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Video className="w-4 h-4" />
+                    <span className="text-sm font-medium">Human Session</span>
+                  </button>
+                                  <button
+                    onClick={() => scheduleSession(tutor.id, 'ai')}
+                    className="flex items-center space-x-1 bg-purple-100 text-purple-700 px-3 py-2 rounded-lg hover:bg-purple-200 transition-colors"
                   >
                     <Bot className="w-4 h-4" />
-                    <span>AI Tutor</span>
+                    <span className="text-sm font-medium">AI Session</span>
                   </button>
                 </div>
+
               </div>
             </div>
           ))}
@@ -233,26 +319,67 @@ export function LearnTab() {
         {upcomingSessions.length > 0 ? (
           <div className="space-y-3">
             {upcomingSessions.map((session) => (
-              <div key={session.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-blue-600" />
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    session.sessionType === 'ai' ? 'bg-purple-100' : 'bg-blue-100'
+                  }`}>
+                    {session.sessionType === 'ai' ? (
+                      <Bot className={`w-5 h-5 ${
+                        session.sessionType === 'ai' ? 'text-purple-600' : 'text-blue-600'
+                      }`} />
+                    ) : (
+                      <Calendar className="w-5 h-5 text-blue-600" />
+                    )}
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900">{session.type}</h4>
+                    <div className="flex items-center space-x-2">
+                      <h4 className="font-medium text-gray-900">{session.type}</h4>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        session.status === 'pending' 
+                          ? 'bg-yellow-100 text-yellow-700' 
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {session.status === 'pending' ? 'Pending Approval' : 'Confirmed'}
+                      </span>
+                    </div>
                     <p className="text-sm text-gray-600">{session.tutor} • {session.subject}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Clock className="w-3 h-3 text-gray-400" />
-                      <span className="text-xs text-gray-500">{session.date} at {session.time}</span>
+                    <div className="flex items-center space-x-4 mt-1">
+                      <div className="flex items-center space-x-1">
+                        <Clock className="w-3 h-3 text-gray-400" />
+                        <span className="text-xs text-gray-500">{session.date} at {session.time}</span>
+                      </div>
+                      <span className="text-xs text-gray-500">Duration: {session.duration}</span>
+                      <span className="text-xs text-gray-500">Cost: ${session.amount}</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+                  <button 
+                    disabled={!session.canReschedule}
+                    className={`text-sm px-3 py-1 border rounded-lg transition-colors ${
+                      session.canReschedule
+                        ? 'text-gray-600 hover:text-gray-800 border-gray-300 hover:bg-gray-50'
+                        : 'text-gray-400 border-gray-200 cursor-not-allowed'
+                    }`}
+                  >
                     Reschedule
                   </button>
-                  <button className="text-sm bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">
-                    Join
+                  <button 
+                    onClick={() => joinSession(session)}
+                    disabled={!session.canJoin}
+                    className={`text-sm px-3 py-1 rounded-lg transition-colors ${
+                      session.canJoin
+                        ? session.status === 'active' 
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {session.canJoin 
+                      ? session.status === 'active' ? 'Rejoin' : 'Join'
+                      : 'Not Ready'
+                    }
                   </button>
                 </div>
               </div>
@@ -266,6 +393,20 @@ export function LearnTab() {
           </div>
         )}
       </div>
+
+      {/* Schedule Session Modal */}
+      {showScheduleModal && selectedTutorForSchedule && (
+        <ScheduleSessionModal
+          isOpen={showScheduleModal}
+          onClose={() => {
+            setShowScheduleModal(false);
+            setSelectedTutorForSchedule(null);
+          }}
+          tutor={selectedTutorForSchedule}
+          sessionType={selectedSessionType}
+          onSchedule={handleScheduleComplete}
+        />
+      )}
     </div>
   );
 }

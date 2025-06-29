@@ -108,19 +108,59 @@ export class SupabaseService {
 
   // Tutor methods
   async getTutors() {
-    const { data, error } = await supabase
+    // Get tutors first
+    const { data: tutors, error: tutorsError } = await supabase
       .from('tutors')
-      .select(`
-        *,
-        users!inner(*),
-        tutor_subjects(
-          subjects(*)
-        )
-      `)
-      .eq('is_available', true);
+      .select('*');
 
-    if (error) throw error;
-    return data;
+    if (tutorsError) {
+      console.error('Error fetching tutors:', tutorsError);
+      throw tutorsError;
+    }
+
+    if (!tutors || tutors.length === 0) {
+      return [];
+    }
+
+    // Get users for these tutors
+    const userIds = tutors.map(t => t.user_id);
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('*')
+      .in('id', userIds);
+
+    if (usersError) {
+      console.error('Error fetching users:', usersError);
+      throw usersError;
+    }
+
+    // Get tutor subjects
+    const tutorIds = tutors.map(t => t.id);
+    const { data: tutorSubjects, error: tsError } = await supabase
+      .from('tutor_subjects')
+      .select(`
+        tutor_id,
+        subjects(*)
+      `)
+      .in('tutor_id', tutorIds);
+
+    if (tsError) {
+      console.error('Error fetching tutor subjects:', tsError);
+    }
+
+    // Combine the data
+    const result = tutors.map(tutor => {
+      const user = users?.find(u => u.id === tutor.user_id);
+      const subjects = tutorSubjects?.filter(ts => ts.tutor_id === tutor.id) || [];
+      
+      return {
+        ...tutor,
+        users: user,
+        tutor_subjects: subjects
+      };
+    });
+
+    return result;
   }
 
   async getTutorById(tutorId: string) {
@@ -225,14 +265,26 @@ export class SupabaseService {
     scheduled_at?: string;
     duration_minutes?: number;
   }) {
-    const { data, error } = await supabase
-      .from('sessions')
-      .insert(sessionData)
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .insert({
+          ...sessionData,
+          status: 'scheduled',
+          video_call_status: 'idle'
+        })
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        console.error('Session creation error:', error);
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Failed to create session:', error);
+      throw error;
+    }
   }
 
   async updateSession(sessionId: string, updates: Partial<Session>) {
@@ -324,6 +376,23 @@ export class SupabaseService {
     } catch (error) {
       console.error('Error creating demo data:', error);
     }
+  }
+
+  // Debug methods
+  async debugTables() {
+    const [users, tutors, subjects, tutorSubjects] = await Promise.all([
+      supabase.from('users').select('*'),
+      supabase.from('tutors').select('*'),
+      supabase.from('subjects').select('*'),
+      supabase.from('tutor_subjects').select('*')
+    ]);
+    
+    console.log('Users:', users.data?.length || 0);
+    console.log('Tutors:', tutors.data?.length || 0);
+    console.log('Subjects:', subjects.data?.length || 0);
+    console.log('Tutor Subjects:', tutorSubjects.data?.length || 0);
+    
+    return { users: users.data, tutors: tutors.data, subjects: subjects.data, tutorSubjects: tutorSubjects.data };
   }
 }
 
