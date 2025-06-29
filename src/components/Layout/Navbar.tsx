@@ -1,5 +1,5 @@
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, User, Settings, Bell } from 'lucide-react';
+import { LogOut, User, Settings, Bell, Brain } from 'lucide-react';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -8,11 +8,14 @@ export function Navbar() {
     <nav className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <div className="w-14 h-8 bg-gradient-to-r from-blue-600 to-teal-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">HumAI</span>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-teal-600 rounded-xl flex items-center justify-center">
+              <Brain className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-gray-900">Tutor</h1>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">HumAITutor</h1>
+              <p className="text-xs text-gray-600">Learn with the mind of a human, speed of AI</p>
+            </div>
           </div>
         </div>
 
