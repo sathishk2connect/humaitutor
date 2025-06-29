@@ -119,7 +119,7 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
                 <User className="w-5 h-5 text-blue-600" />
               )}
               <span className="text-sm font-medium">
-                {sessionType === 'ai' ? 'AI Session' : 'Human Session'}
+                'Session'
               </span>
             </div>
           </div>
