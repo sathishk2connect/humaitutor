@@ -7,6 +7,7 @@ import { Sidebar } from './components/Layout/Sidebar';
 import { StudentDashboard } from './components/Student/StudentDashboard';
 import { TutorDashboard } from './components/Tutor/TutorDashboard';
 import { AdminDashboard } from './components/Admin/AdminDashboard';
+import { Homepage } from './components/Homepage/Homepage';
 
 function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
@@ -67,8 +68,17 @@ function Dashboard() {
 
 function AppContent() {
   const { user } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
 
-  return user ? <Dashboard /> : <AuthScreen />;
+  if (user) {
+    return <Dashboard />;
+  }
+
+  if (showAuth) {
+    return <AuthScreen />;
+  }
+
+  return <Homepage onGetStarted={() => setShowAuth(true)} />;
 }
 
 function App() {
