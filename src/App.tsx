@@ -9,16 +9,16 @@ import { TutorDashboard } from './components/Tutor/TutorDashboard';
 import { AdminDashboard } from './components/Admin/AdminDashboard';
 import { Homepage } from './components/Homepage/Homepage';
 
-function AuthScreen() {
+function AuthScreen({ onBackToHome }: { onBackToHome: () => void }) {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {isLogin ? (
-          <LoginForm onToggleMode={() => setIsLogin(false)} />
+          <LoginForm onToggleMode={() => setIsLogin(false)} onBackToHome={onBackToHome} />
         ) : (
-          <RegisterForm onToggleMode={() => setIsLogin(true)} />
+          <RegisterForm onToggleMode={() => setIsLogin(true)} onBackToHome={onBackToHome} />
         )}
       </div>
     </div>
@@ -75,7 +75,7 @@ function AppContent() {
   }
 
   if (showAuth) {
-    return <AuthScreen />;
+    return <AuthScreen onBackToHome={() => setShowAuth(false)} />;
   }
 
   return <Homepage onGetStarted={() => setShowAuth(true)} />;
