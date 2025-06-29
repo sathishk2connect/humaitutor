@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, Brain } from 'lucide-react';
 
 interface LoginFormProps {
   onToggleMode: () => void;
+  onBackToHome: () => void;
 }
 
-export function LoginForm({ onToggleMode }: LoginFormProps) {
+export function LoginForm({ onToggleMode, onBackToHome }: LoginFormProps) {
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,11 +25,10 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     }
   };
 
-  const quickLogin = (role: 'student' | 'tutor' | 'admin') => {
+  const quickLogin = (role: 'student' | 'tutor') => {
     const emails = {
       student: 'student@demo.com',
-      tutor: 'tutor@demo.com',
-      admin: 'admin@demo.com'
+      tutor: 'tutor@demo.com'
     };
     setEmail(emails[role]);
     setPassword('demo123');
@@ -37,11 +37,20 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   return (
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <span className="text-white font-bold text-2xl">AI</span>
-        </div>
-        <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
-        <p className="text-gray-600 mt-2">Sign in to continue your learning journey</p>
+        <button
+          onClick={onBackToHome}
+          className="inline-flex items-center space-x-3 mb-4 hover:opacity-80 transition-opacity"
+        >
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-teal-600 rounded-2xl flex items-center justify-center">
+            <Brain className="w-8 h-8 text-white" />
+          </div>
+          <div className="text-left">
+            <h1 className="text-2xl font-bold text-gray-900">HumAITutor</h1>
+            <p className="text-sm text-gray-600">Learn with the mind of a human, speed of AI</p>
+          </div>
+        </button>
+        <h2 className="text-3xl font-bold text-gray-900">Sign In</h2>
+        <p className="text-gray-600 mt-2">Continue your learning journey</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -112,24 +121,18 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
         <div className="text-center text-sm text-gray-600 mb-4">
           Demo Quick Access
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => quickLogin('student')}
-            className="px-3 py-2 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+            className="px-4 py-3 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium"
           >
-            Student
+            Student Demo
           </button>
           <button
             onClick={() => quickLogin('tutor')}
-            className="px-3 py-2 text-xs bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors"
+            className="px-4 py-3 text-sm bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors font-medium"
           >
-            Tutor
-          </button>
-          <button
-            onClick={() => quickLogin('admin')}
-            className="px-3 py-2 text-xs bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors"
-          >
-            Admin
+            Tutor Demo
           </button>
         </div>
       </div>

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { User, Mail, Lock, UserCheck, Loader2 } from 'lucide-react';
+import { User, Mail, Lock, UserCheck, Loader2, Brain } from 'lucide-react';
 
 interface RegisterFormProps {
   onToggleMode: () => void;
+  onBackToHome: () => void;
 }
 
-export function RegisterForm({ onToggleMode }: RegisterFormProps) {
+export function RegisterForm({ onToggleMode, onBackToHome }: RegisterFormProps) {
   const { register, isLoading } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
@@ -48,9 +49,18 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
   return (
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <span className="text-white font-bold text-2xl">AI</span>
-        </div>
+        <button
+          onClick={onBackToHome}
+          className="inline-flex items-center space-x-3 mb-4 hover:opacity-80 transition-opacity"
+        >
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-teal-600 rounded-2xl flex items-center justify-center">
+            <Brain className="w-8 h-8 text-white" />
+          </div>
+          <div className="text-left">
+            <h1 className="text-2xl font-bold text-gray-900">HumAITutor</h1>
+            <p className="text-sm text-gray-600">Learn with the mind of a human, speed of AI</p>
+          </div>
+        </button>
         <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
         <p className="text-gray-600 mt-2">Join the future of personalized learning</p>
       </div>

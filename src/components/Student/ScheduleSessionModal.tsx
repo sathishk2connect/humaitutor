@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, DollarSign, User, Bot } from 'lucide-react';
+import { X, Calendar, Clock, DollarSign, User, Bot, CheckCircle } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -25,6 +25,7 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
   const [duration, setDuration] = useState(1);
   const [studentBalance, setStudentBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const hourlyRate = sessionType === 'ai' ? Math.round(tutor.hourlyRate * 0.3) : tutor.hourlyRate;
   const totalCost = hourlyRate * duration;
@@ -33,6 +34,9 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
   useEffect(() => {
     if (isOpen && user) {
       loadStudentBalance();
+      // Reset states when modal opens
+      setIsSuccess(false);
+      setIsLoading(false);
       // Set default date/time for "later" option
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -81,11 +85,21 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
       };
 
       await supabaseService.createSession(sessionData);
+      
+      // Show success state
+      setIsSuccess(true);
+      
+      // Call the onSchedule callback
       onSchedule(sessionData);
-      onClose();
+      
+      // Close modal after a brief delay to show success state
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+      
     } catch (error) {
       console.error('Error scheduling session:', error);
-      alert('Failed to schedule session. Please try again.');
+      // You could add error state handling here if needed
     } finally {
       setIsLoading(false);
     }
@@ -227,24 +241,51 @@ export function ScheduleSessionModal({ isOpen, onClose, tutor, sessionType, onSc
             </div>
           )}
 
+          {/* Success Message */}
+          {isSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <p className="text-sm text-green-700 font-medium">
+                  Session scheduled successfully! Total cost: ${totalCost}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex space-x-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              disabled={isLoading || isSuccess}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               onClick={handleSchedule}
-              disabled={!canAfford || isLoading}
-              className={`flex-1 px-4 py-2 rounded-lg font-medium ${
-                canAfford && !isLoading
+              disabled={!canAfford || isLoading || isSuccess}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                isSuccess
+                  ? 'bg-green-600 text-white'
+                  : canAfford && !isLoading
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              {isLoading ? 'Scheduling...' : 'Schedule Session'}
+              {isSuccess ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Scheduled!</span>
+                </div>
+              ) : isLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Scheduling...</span>
+                </div>
+              ) : (
+                'Schedule Session'
+              )}
             </button>
           </div>
         </div>

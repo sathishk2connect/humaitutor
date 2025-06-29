@@ -48,6 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Error checking user:', error);
+      // Clear auth state when session validation fails
+      setUser(null);
+      setSupabaseUser(null);
     } finally {
       setIsLoading(false);
     }
