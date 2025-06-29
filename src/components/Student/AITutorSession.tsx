@@ -59,26 +59,21 @@ export function AITutorSession({ sessionId, onEndSession, tutorInfo }: AITutorSe
     // Subscribe to real-time messages
     const unsubscribe = chatService.subscribeToMessages(sessionId, (newMessages) => {
       setMessages(newMessages);
-    });
-
-    // Add welcome message only once per session
-    if (!welcomeMessageSentRef.current) {
-      welcomeMessageSentRef.current = true;
       
-      // Check if session already has messages to avoid duplicates
-      const existingMessages = messages.filter(msg => msg.sender === 'ai' && msg.content.includes('Hi! I\'m'));
-      
-      if (existingMessages.length === 0) {
+      // Only send welcome message if no messages exist and we haven't sent it before
+      if (newMessages.length === 0 && !welcomeMessageSentRef.current) {
+        welcomeMessageSentRef.current = true;
+        
         const tutorName = tutorInfo?.name || 'AI Tutor';
         const subject = tutorInfo?.subject || 'various subjects';
         
-      /*  chatService.sendMessage(sessionId, {
+        chatService.sendMessage(sessionId, {
           sender: 'ai',
           content: `Hi! I'm ${tutorName}'s AI assistant. I'm here to help you with ${subject}. What would you like to learn today?`,
           senderName: 'AI Tutor'
-        }); */
+        });
       }
-    }
+    });
 
     return () => unsubscribe();
   }, [sessionId, tutorInfo]);
@@ -113,8 +108,6 @@ export function AITutorSession({ sessionId, onEndSession, tutorInfo }: AITutorSe
       setIsLoading(false);
     }
   };
-
-
 
   if (showVideoConversation && tutorInfo) {
     return (

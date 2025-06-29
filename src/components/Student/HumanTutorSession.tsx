@@ -55,20 +55,20 @@ export function HumanTutorSession({ sessionId, tutorInfo, onEndSession }: HumanT
     // Subscribe to real-time messages
     const unsubscribe = chatService.subscribeToMessages(sessionId, (newMessages) => {
       setMessages(newMessages);
+      
+      // Only send welcome message if no messages exist and we haven't sent it before
+      if (newMessages.length === 0 && !welcomeMessageSentRef.current) {
+        welcomeMessageSentRef.current = true;
+        chatService.sendMessage(sessionId, {
+          sender: 'system',
+          content: `Welcome to your session with ${tutorInfo.name}! You can interact with your tutor and their AI replica through this chat.`,
+          senderName: 'System'
+        });
+      }
     });
 
-    // Add welcome message only once
-    if (!welcomeMessageSentRef.current) {
-      welcomeMessageSentRef.current = true;
-      chatService.sendMessage(sessionId, {
-        sender: 'system',
-        content: `Welcome to your session with ${tutorInfo.name}! You can interact with your tutor and their AI replica through this chat.`,
-        senderName: 'System'
-      });
-    }
-
     return () => unsubscribe();
-  }, []);
+  }, [sessionId, tutorInfo.name]);
 
   if (isVideoCall) {
     return (

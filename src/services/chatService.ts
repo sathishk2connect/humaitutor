@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase';
 
 export class ChatService {
   private messageStore: { [sessionId: string]: any[] } = {};
-  private welcomeMessagesSent: Set<string> = new Set();
 
   async sendMessage(sessionId: string, message: { sender: string; content: string; senderName: string }) {
     try {
@@ -48,14 +47,6 @@ export class ChatService {
 
     // Return unsubscribe function
     return () => clearInterval(interval);
-  }
-
-  hasWelcomeMessage(sessionId: string): boolean {
-    return this.welcomeMessagesSent.has(sessionId);
-  }
-
-  markWelcomeMessageSent(sessionId: string): void {
-    this.welcomeMessagesSent.add(sessionId);
   }
 }
 
