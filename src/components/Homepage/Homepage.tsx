@@ -115,12 +115,32 @@ export function Homepage({ onGetStarted }: HomepageProps) {
               <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
             </div>
             
-            <button
-              onClick={onGetStarted}
-              className="bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-teal-700 transition-all duration-200 font-medium"
-            >
-              Get Started
-            </button>
+            <div className="flex items-center space-x-4">
+              {/* Powered by Bolt.new Badge */}
+              <a
+                href="https://bolt.new/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+                title="Powered by Bolt.new"
+              >
+                <img
+                  src="/black_circle_360x360.png"
+                  alt="Powered by Bolt.new"
+                  className="w-8 h-8 sm:w-10 sm:h-10"
+                />
+                <span className="hidden sm:block text-xs text-gray-600 font-medium">
+                  Powered by Bolt.new
+                </span>
+              </a>
+              
+              <button
+                onClick={onGetStarted}
+                className="bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-teal-700 transition-all duration-200 font-medium"
+              >
+                Get Started
+              </button>
+            </div>
           </div>
         </div>
       </nav>
