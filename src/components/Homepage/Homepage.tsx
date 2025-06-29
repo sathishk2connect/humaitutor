@@ -196,7 +196,7 @@ export function Homepage({ onGetStarted }: HomepageProps) {
                   </div>
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <p className="text-sm text-blue-800">
-                      "Of course! The discriminant tells us about the nature of the roots. When b² - 4ac > 0..."
+                      "Of course! The discriminant tells us about the nature of the roots. When b² - 4ac &gt; 0..."
                     </p>
                   </div>
                 </div>
