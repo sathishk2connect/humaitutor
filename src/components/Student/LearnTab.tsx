@@ -156,11 +156,11 @@ export function LearnTab() {
   }
   
   const scheduleSession = (tutorId: string, type: 'human' | 'ai') => {
-    if (hasActiveSession) {
+   /* if (hasActiveSession) {
       setOverlayMessage('You have an active session running. Please wait for it to complete before scheduling another session.');
       setTimeout(() => setOverlayMessage(null), 4000);
       return;
-    }
+    } */
     
     const tutor = enrolledTutors.find(t => t.id === tutorId);
     if (tutor) {
