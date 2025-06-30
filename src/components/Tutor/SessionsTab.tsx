@@ -23,23 +23,32 @@ export function SessionsTab() {
       setIsLoading(true);
       const sessionsData = await supabaseService.getSessions(user!.id, 'tutor');
       
-      const formattedSessions = sessionsData.map(session => ({
-        id: session.id,
-        student: {
-          name: session.students?.users?.name || 'Unknown Student',
-          avatar: session.students?.users?.avatar_url || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg'
-        },
-        subject: session.subjects?.name || 'General',
-        type: session.type === 'human' ? 'Live Session' : 'AI Session',
-        date: new Date(session.scheduled_at || session.created_at).toLocaleDateString(),
-        time: new Date(session.scheduled_at || session.created_at).toLocaleTimeString(),
-        duration: `${session.duration_minutes || 60} min`,
-        status: session.video_call_status === 'waiting' ? 'active' : session.status,
-        rating: session.student_rating,
-        feedback: session.student_feedback,
-        earnings: `$${session.amount || 0}`,
-        video_call_status: session.video_call_status
-      }));
+      const formattedSessions = sessionsData.map(session => {
+        const startTime = new Date(session.scheduled_at || session.created_at);
+        const endTime = new Date(startTime.getTime() + (session.duration_minutes || 60) * 60 * 1000);
+        const now = new Date();
+        const isSessionActive = now <= endTime && session.status === 'scheduled';
+        
+        return {
+          id: session.id,
+          student: {
+            name: session.students?.users?.name || 'Unknown Student',
+            avatar: session.students?.users?.avatar_url || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg'
+          },
+          subject: session.subjects?.name || 'General',
+          type: session.type === 'human' ? 'Live Session' : 'AI Session',
+          date: startTime.toLocaleDateString(),
+          time: startTime.toLocaleTimeString(),
+          duration: `${session.duration_minutes || 60} min`,
+          status: session.video_call_status === 'waiting' ? 'active' : session.status,
+          rating: session.student_rating,
+          feedback: session.student_feedback,
+          earnings: `$${session.amount || 0}`,
+          video_call_status: session.video_call_status,
+          endTime: endTime,
+          isSessionActive: isSessionActive
+        };
+      });
       
       setSessions(formattedSessions);
     } catch (error) {
@@ -314,7 +323,7 @@ export function SessionsTab() {
                 </>
               )}
               
-              {session.status === 'scheduled' && (
+              {(session.status === 'scheduled' && session.isSessionActive) && (
                 <>
                   <button 
                     onClick={() => joinSession(session)}
@@ -333,7 +342,7 @@ export function SessionsTab() {
                 </>
               )}
               
-              {session.status === 'completed' && (
+              {(session.status === 'completed' || (session.status === 'scheduled' && !session.isSessionActive)) && (
                 <button className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
                   <MessageSquare className="w-4 h-4" />
                   <span>View Session Recap</span>
