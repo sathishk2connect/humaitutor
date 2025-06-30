@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
+import { agoraService } from '../services/agoraService';
 
 interface VideoCallProps {
   sessionId: string;
@@ -32,12 +33,15 @@ export function VideoCall({ sessionId, userType, userName, onEndCall }: VideoCal
       // Create Agora client
       clientRef.current = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
       
-      // Generate UID based on user type
-      const uid = userType === 'student' ? 1000 + Math.floor(Math.random() * 1000) : 2000 + Math.floor(Math.random() * 1000);
+      // Generate dynamic channel name and token
+      const channelName = agoraService.generateChannelName(sessionId);
+      const uid = agoraService.generateUid(userType);
+      const token = await agoraService.generateToken(channelName, uid, 'publisher');
       
-      const token = import.meta.env.VITE_AGORA_TEMP_TOKEN;
+      console.log(`Joining channel: ${channelName} with UID: ${uid}`);
+      
       // Join channel
-      await clientRef.current.join(appId, "HumaiTokenChannel", token, uid);
+      await clientRef.current.join(appId, channelName, token, uid);
       
       // Create local tracks
       localVideoTrackRef.current = await AgoraRTC.createCameraVideoTrack();
